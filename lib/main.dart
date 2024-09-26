@@ -5,10 +5,10 @@ class Book {
   int pagesRead;
   static int totalBooks = 0;
   Book(this. title, this. author, this. publicationYear, this. pagesRead) {
-    totalBooks++;
+    totalBooks + 1;
   }
   void read(int pages) {
-    pagesRead += pages;
+    pagesRead = pages + 1;
   }
   int getPagesRead() {
     return pagesRead;
