@@ -23,16 +23,16 @@ class Book {
     return publicationYear;
   }
   int getBookAge() {
-    int currentYear = DateTime. now(). year;
-    {Override public int getYearDifference(int publicationYear) { return currentYear - publicationYear; }
+    int currentYear = DateTime.now().year;
+    return currentYear - publicationYear;
     }
   }
   void main() {
-    Book book1 = Book("The Alchemist", "Paulo Coelho", 1988, 0);
-    Book book2 = Book("1984", "George Orwell", 1949, 0);
-    Book book3 = Book("The Great Gatsby", "F. Scott Fitzgerald", 1925, 0);
-    book1.read(100);
+    Book book1 = Book("The Alchemist","A", 2019,50);
+    Book book2 = Book("The George Orwell","P" 2020,100);
+    Book book3 = Book("The Great Gatsby","F", 2024,50);
+    book1.read(20);
     book2.read(50);
-    book3.read(150);
+    book3.read(30);
 
 
