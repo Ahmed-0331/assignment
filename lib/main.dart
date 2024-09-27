@@ -1,38 +1,16 @@
-class Book {
-  String title;
-  String author;
-  int publicationYear;
-  int pagesRead;
-  static int totalBooks = 0;
-  Book(this. title, this. author, this. publicationYear, this. pagesRead) {
-    totalBooks + 1;
+class Car {
+  String brand;
+  String model;
+  int year;
+  Car(this. brand, this. model, this. year);
+  int carAge() {
+    return DateTime. now().year-year;
   }
-  void read(int pages) {
-    pagesRead = pages + 1;
-  }
-  int getPagesRead() {
-    return pagesRead;
-  }
-  String getTitle() {
-    return title;
-  }
-  String getAuthor() {
-    return author;
-  }
-  int getPublicationYear() {
-    return publicationYear;
-  }
-  int getBookAge() {
-    int currentYear = DateTime.now().year;
-    return currentYear - publicationYear;
-    }
-  }
-  void main() {
-    Book book1 = Book("The Alchemist","A", 2019,50);
-    Book book2 = Book("The George Orwell","P",2020,100);
-    Book book3 = Book("The Great Gatsby","F", 2024,50);
-    book1.read(20);
-    book2.read(50);
-    book3.read(30);
-
-
+}
+void main() {
+  final myCar = Car('Toyota', 'Corolla', 2015);
+  print('Brand: ${myCar. brand}');
+  print('Model: ${myCar. model}');
+  print('Year: ${myCar. year}');
+  print('Car Age: ${myCar. carAge()} years');
+}
