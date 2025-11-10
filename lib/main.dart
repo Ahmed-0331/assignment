@@ -1,118 +1,110 @@
+import 'package:flutter/material.dart';
 
-//Problem 1 Code
-
-class Book {
-  String title;
-  String author;
-  double price;
-  // Constructor
-  Book(this.title, this.author, this.price);
-  // Method: Calculate discounted price
-  double discountedPrice(double discountPercent) {
-    return price - (price * discountPercent / 100);
-  }
-  // Method: Print book details
-  void displayDetails(double discountPercent) {
-    print("Book Title: $title");
-    print("Author: $author");
-    print("Original Price: \$${price.toStringAsFixed(2)}");
-    print("Discounted Price (${discountPercent}% off): \"
-    "${discountedPrice(discountPercent).toStringAsFixed(2)}");
-
-
-    print("--------------------------------------------------");
-  }
-}
 void main() {
-  // Create two Book objects
-  Book book1 = Book("The Alchemist", "Paulo Coelho", 500);
-  Book book2 = Book("Atomic Habits", "James Clear", 800);
-  // Print their details with discounts
-  book1.displayDetails(10); // 10% discount
-  book2.displayDetails(20); // 20% discount
+  runApp(ContactListApp());
 }
 
-//Problem 2 Code
-
-class Employee {
-  String name;
-  double salary;
-  Employee(this.name, this.salary);
-}
-class Manager extends Employee {
-  String department;
-  Manager(String name, double salary, this.department) : super(name, salary);
-  void displayInfo() {
-    print("Manager Name: $name");
-    print("Salary: \$${salary.toStringAsFixed(2)}");
-    print("Department: $department");
-
-
-    print("--------------------------------------------------");
-  }
-}
-class Developer extends Employee {
-  String programmingLanguage;
-  Developer(String name, double salary, this.programmingLanguage)
-      : super(name, salary);
-  void displayInfo() {
-    print("Developer Name: $name");
-    print("Salary: \$${salary.toStringAsFixed(2)}");
-    print("Programming Language: $programmingLanguage");
-
-
-    print("--------------------------------------------------");
-  }
-}
-void main() {
-  // Create one Manager and one Developer
-  Manager manager = Manager("Alice", 75000, "Human Resources");
-  Developer developer = Developer("Bob", 60000, "Dart/Flutter");
-  // Display their details
-  manager.displayInfo();
-  developer.displayInfo();
-}
-
-//Problem 3 Code
-
-// Abstract class Appliance
-abstract class Appliance {
-  void turnOn();
-  void turnOff();
-}
-// Fan subclass
-class Fan extends Appliance {
+class ContactListApp extends StatelessWidget {
   @override
-  void turnOn() {
-    print("Fan is now running...");
-  }
-  @override
-  void turnOff() {
-    print("Fan is switched off.");
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: ContactListScreen(),
+    );
   }
 }
-// Light subclass
-class Light extends Appliance {
-  @override
-  void turnOn() {
-    print("Light is now switched on.");
-  }
+
+class ContactListScreen extends StatelessWidget {
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController numberController = TextEditingController();
+
+  final List<Map<String, String>> contacts = [
+    {'name': 'Jawad', 'number': '01877-777777'},
+    {'name': 'Ferdous', 'number': '01673-777777'},
+    {'name': 'Hasan', 'number': '01745-777777'},
+    {'name': 'Hasan', 'number': '01745-777777'},
+    {'name': 'Hasan', 'number': '01745-777777'},
+    {'name': 'Hasan', 'number': '01745-777777'},
+    {'name': 'Hasan', 'number': '01745-777777'},
+    {'name': 'Ahmed', 'number': '01745-777777'},
+  ];
 
   @override
-  void turnOff() {
-    print("Light is switched off.");
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Contact List',
+          style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white),
+        ),
+        backgroundColor: Colors.blueGrey,
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Name field
+            TextFormField(
+              controller: nameController,
+              decoration: InputDecoration(
+                hintText: 'Ahmed',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 10),
+
+            // Number field
+            TextFormField(
+              controller: numberController,
+              decoration: InputDecoration(
+                hintText: '01745-787878',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+            SizedBox(height: 10),
+            // Add button
+            SizedBox(
+              width: double.infinity,
+              height: 45,
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                ),
+                child: Text('Add', style: TextStyle(fontSize: 18,color: Colors.white)),
+              ),
+            ),
+            SizedBox(height: 15),
+
+            // Contact lis
+            Expanded(
+              child: ListView.builder(
+                itemCount: contacts.length,
+                itemBuilder: (context, index) {
+                  final contact = contacts[index];
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 6),
+                    child: ListTile(
+                      leading: Icon(Icons.person, color: Colors.brown),
+                      title: Text(
+                        contact['name']!,
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(contact['number']!),
+                      trailing: Icon(Icons.call, color: Colors.blue),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
-void main() {
-  // Create one Fan and one Light object
-  Fan fan = Fan();
-  Light light = Light();
-
-  // Call their methods
-  fan.turnOn();
-  fan.turnOff();
-
-  light.turnOn();
-  light.turnOff();
-}
-
