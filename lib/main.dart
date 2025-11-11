@@ -1,110 +1,400 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:math_expressions/math_expressions.dart';
 
 void main() {
-  runApp(ContactListApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const CalculatorApp(),
+    ),
+  );
 }
 
-class ContactListApp extends StatelessWidget {
+/* =========================
+   ThemeProvider (with persistence)
+   ========================= */
+class ThemeProvider extends ChangeNotifier {
+  static const String _prefKey = 'isDarkMode';
+  bool _isDark = false;
+  bool get isDark => _isDark;
+
+  ThemeProvider() {
+    _loadFromPrefs();
+  }
+
+  toggleTheme() {
+    _isDark = !_isDark;
+    _saveToPrefs();
+    notifyListeners();
+  }
+
+  Future<void> _loadFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _isDark = prefs.getBool(_prefKey) ?? false;
+    notifyListeners();
+  }
+
+  Future<void> _saveToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, _isDark);
+  }
+}
+
+/* =========================
+   App Root
+   ========================= */
+class CalculatorApp extends StatelessWidget {
+  const CalculatorApp({super.key});
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: ContactListScreen(),
+      title: 'Calculator',
+      themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        colorSchemeSeed: Colors.blue,
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorSchemeSeed: Colors.teal,
+      ),
+      home: const CalculatorScreen(),
     );
   }
 }
 
-class ContactListScreen extends StatelessWidget {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController numberController = TextEditingController();
+/* =========================
+   Calculator Logic
+   - Prevents multiple operators in a row
+   - Supports decimal
+   - Backspace, AC, equals
+   ========================= */
+class CalculatorLogic {
+  String expression = '';
+  String result = '0';
 
-  final List<Map<String, String>> contacts = [
-    {'name': 'Jawad', 'number': '01877-777777'},
-    {'name': 'Ferdous', 'number': '01673-777777'},
-    {'name': 'Hasan', 'number': '01745-777777'},
-    {'name': 'Hasan', 'number': '01745-777777'},
-    {'name': 'Hasan', 'number': '01745-777777'},
-    {'name': 'Hasan', 'number': '01745-777777'},
-    {'name': 'Hasan', 'number': '01745-777777'},
-    {'name': 'Ahmed', 'number': '01745-777777'},
-  ];
+  final _operators = ['+', '-', '×', '÷', '*', '/'];
+
+  // add input (digits, ., operators, AC, =, backspace handled outside)
+  void addInput(String input) {
+    if (input == 'AC') {
+      expression = '';
+      result = '0';
+      return;
+    }
+
+    if (input == '=') {
+      _calculateResult();
+      return;
+    }
+
+    // Avoid starting with operator except minus (for negative numbers)
+    if (expression.isEmpty && _isOperator(input) && input != '-') {
+      return;
+    }
+
+    // Prevent two operators in a row (treat dot separately)
+    if (expression.isNotEmpty) {
+      String last = expression[expression.length - 1];
+      if (_isOperator(last) && _isOperator(input)) {
+        // allow minus after operator? e.g., "5 × -3" is not typical here; block both operators
+        return;
+      }
+      if (last == '.' && input == '.') return; // avoid ".."
+    }
+
+    // Prevent multiple decimals in the same number segment
+    if (input == '.') {
+      // find last operator index
+      int lastOp = -1;
+      for (int i = expression.length - 1; i >= 0; i--) {
+        if (_isOperator(expression[i])) {
+          lastOp = i;
+          break;
+        }
+      }
+      String currentNumber = expression.substring(lastOp + 1);
+      if (currentNumber.contains('.')) return;
+      if (currentNumber.isEmpty) {
+        // if user presses "." right after operator or start, prepend "0"
+        expression += '0';
+      }
+    }
+
+    expression += input;
+  }
+
+  void backspace() {
+    if (expression.isNotEmpty) {
+      expression = expression.substring(0, expression.length - 1);
+      if (expression.isEmpty) result = '0';
+    }
+  }
+
+  bool _isOperator(String s) {
+    return _operators.contains(s);
+  }
+
+  void _calculateResult() {
+    try {
+      if (expression.isEmpty) {
+        result = '0';
+        return;
+      }
+      String finalExp = expression.replaceAll('×', '*').replaceAll('÷', '/');
+
+      // Prevent trailing operator
+      String last = finalExp[finalExp.length - 1];
+      if (_isOperator(last)) {
+        finalExp = finalExp.substring(0, finalExp.length - 1);
+      }
+
+      Parser p = Parser();
+      Expression exp = p.parse(finalExp);
+      ContextModel cm = ContextModel();
+      double eval = exp.evaluate(EvaluationType.REAL, cm);
+
+      // Trim result (remove .0 if integer)
+      if (eval % 1 == 0) {
+        result = eval.toInt().toString();
+      } else {
+        result = eval.toString();
+      }
+
+      // After equals, keep result as new expression (so user can continue)
+      expression = result;
+    } catch (e) {
+      result = 'Error';
+    }
+  }
+}
+
+/* =========================
+   Calculator Button Widget
+   ========================= */
+class CalculatorButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final double flex;
+  final Color? background;
+  final Color? textColor;
+
+  const CalculatorButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.flex = 1,
+    this.background,
+    this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final btn = Expanded(
+      flex: flex.round(),
+      child: Padding(
+        padding: const EdgeInsets.all(6.0),
+        child: ElevatedButton(
+          onPressed: onTap,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            backgroundColor: background ?? Theme.of(context).colorScheme.primaryContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w600,
+                color: textColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return btn;
+  }
+}
+
+/* =========================
+   Calculator Screen (UI)
+   ========================= */
+class CalculatorScreen extends StatefulWidget {
+  const CalculatorScreen({super.key});
+
+  @override
+  State<CalculatorScreen> createState() => _CalculatorScreenState();
+}
+
+class _CalculatorScreenState extends State<CalculatorScreen> {
+  final CalculatorLogic logic = CalculatorLogic();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDark;
+    final size = MediaQuery.of(context).size;
+    final isPortrait = size.height > size.width;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Contact List',
-          style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white),
-        ),
-        backgroundColor: Colors.blueGrey,
-        centerTitle: true,
+        title: const Text('Calculator'),
+        actions: [
+          IconButton(
+            tooltip: isDark ? 'Light mode' : 'Dark mode',
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () => Provider.of<ThemeProvider>(context, listen: false).toggleTheme(),
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
         child: Column(
           children: [
-            // Name field
-            TextFormField(
-              controller: nameController,
-              decoration: InputDecoration(
-                hintText: 'Ahmed',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 10),
-
-            // Number field
-            TextFormField(
-              controller: numberController,
-              decoration: InputDecoration(
-                hintText: '01745-787878',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.phone,
-            ),
-            SizedBox(height: 10),
-            // Add button
-            SizedBox(
-              width: double.infinity,
-              height: 45,
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                ),
-                child: Text('Add', style: TextStyle(fontSize: 18,color: Colors.white)),
-              ),
-            ),
-            SizedBox(height: 15),
-
-            // Contact lis
+            // Display
             Expanded(
-              child: ListView.builder(
-                itemCount: contacts.length,
-                itemBuilder: (context, index) {
-                  final contact = contacts[index];
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 6),
-                    child: ListTile(
-                      leading: Icon(Icons.person, color: Colors.brown),
-                      title: Text(
-                        contact['name']!,
+              flex: isPortrait ? 2 : 1,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                alignment: Alignment.bottomRight,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      reverse: true,
+                      child: Text(
+                        logic.expression.isEmpty ? '0' : logic.expression,
                         style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
+                          fontSize: 28,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
+                        textAlign: TextAlign.right,
                       ),
-                      subtitle: Text(contact['number']!),
-                      trailing: Icon(Icons.call, color: Colors.blue),
                     ),
-                  );
-                },
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      reverse: true,
+                      child: Text(
+                        logic.result,
+                        style: TextStyle(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Buttons
+            Expanded(
+              flex: 3,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Column(
+                  children: [
+                    _buildRow(['AC', '⌫', '÷'], context),
+                    _buildRow(['7', '8', '9', '×'], context),
+                    _buildRow(['4', '5', '6', '-'], context),
+                    _buildRow(['1', '2', '3', '+'], context),
+                    _buildLastRow(context),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildRow(List<String> labels, BuildContext context) {
+    return Expanded(
+      child: Row(
+        children: labels.map((label) {
+          return CalculatorButton(
+            label: label,
+            onTap: () => _onPressed(label, context),
+            background: _buttonBackground(label, context),
+            textColor: _buttonTextColor(label, context),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildLastRow(BuildContext context) {
+    return Expanded(
+      child: Row(
+        children: [
+          CalculatorButton(
+            label: '0',
+            flex: 2,
+            onTap: () => _onPressed('0', context),
+          ),
+          CalculatorButton(
+            label: '.',
+            onTap: () => _onPressed('.', context),
+          ),
+          CalculatorButton(
+            label: '=',
+            onTap: () => _onPressed('=', context),
+            background: Theme.of(context).colorScheme.secondaryContainer,
+            textColor: Theme.of(context).colorScheme.onSecondaryContainer,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color? _buttonBackground(String label, BuildContext context) {
+    if (label == 'AC') return Colors.redAccent;
+    if (label == '⌫') return Colors.orangeAccent;
+    if (label == '=') return Theme.of(context).colorScheme.secondaryContainer;
+    if (['÷', '×', '-', '+'].contains(label)) return Theme.of(context).colorScheme.primaryContainer;
+    return null; // default
+  }
+
+  Color? _buttonTextColor(String label, BuildContext context) {
+    if (label == 'AC' || label == '⌫') return Colors.white;
+    if (label == '=') return Theme.of(context).colorScheme.onSecondaryContainer;
+    return null;
+  }
+
+  void _onPressed(String label, BuildContext context) {
+    setState(() {
+      if (label == 'AC') {
+        logic.addInput('AC');
+      } else if (label == '⌫') {
+        logic.backspace();
+      } else if (label == '=') {
+        logic.addInput('=');
+      } else if (label == '÷' || label == '×' || label == '+' || label == '-' || label == '.' || _isDigit(label)) {
+        logic.addInput(label);
+      }
+      // else ignore
+    });
+  }
+
+  bool _isDigit(String s) {
+    return RegExp(r'^[0-9]$').hasMatch(s);
   }
 }
