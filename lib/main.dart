@@ -12,10 +12,6 @@ void main() {
     ),
   );
 }
-
-/* =========================
-   ThemeProvider (with persistence)
-   ========================= */
 class ThemeProvider extends ChangeNotifier {
   static const String _prefKey = 'isDarkMode';
   bool _isDark = false;
@@ -42,10 +38,6 @@ class ThemeProvider extends ChangeNotifier {
     await prefs.setBool(_prefKey, _isDark);
   }
 }
-
-/* =========================
-   App Root
-   ========================= */
 class CalculatorApp extends StatelessWidget {
   const CalculatorApp({super.key});
 
@@ -70,20 +62,11 @@ class CalculatorApp extends StatelessWidget {
     );
   }
 }
-
-/* =========================
-   Calculator Logic
-   - Prevents multiple operators in a row
-   - Supports decimal
-   - Backspace, AC, equals
-   ========================= */
 class CalculatorLogic {
   String expression = '';
   String result = '0';
 
   final _operators = ['+', '-', '×', '÷', '*', '/'];
-
-  // add input (digits, ., operators, AC, =, backspace handled outside)
   void addInput(String input) {
     if (input == 'AC') {
       expression = '';
@@ -96,24 +79,21 @@ class CalculatorLogic {
       return;
     }
 
-    // Avoid starting with operator except minus (for negative numbers)
     if (expression.isEmpty && _isOperator(input) && input != '-') {
       return;
     }
 
-    // Prevent two operators in a row (treat dot separately)
     if (expression.isNotEmpty) {
       String last = expression[expression.length - 1];
       if (_isOperator(last) && _isOperator(input)) {
-        // allow minus after operator? e.g., "5 × -3" is not typical here; block both operators
+
         return;
       }
       if (last == '.' && input == '.') return; // avoid ".."
     }
 
-    // Prevent multiple decimals in the same number segment
     if (input == '.') {
-      // find last operator index
+
       int lastOp = -1;
       for (int i = expression.length - 1; i >= 0; i--) {
         if (_isOperator(expression[i])) {
@@ -124,7 +104,7 @@ class CalculatorLogic {
       String currentNumber = expression.substring(lastOp + 1);
       if (currentNumber.contains('.')) return;
       if (currentNumber.isEmpty) {
-        // if user presses "." right after operator or start, prepend "0"
+
         expression += '0';
       }
     }
@@ -151,7 +131,6 @@ class CalculatorLogic {
       }
       String finalExp = expression.replaceAll('×', '*').replaceAll('÷', '/');
 
-      // Prevent trailing operator
       String last = finalExp[finalExp.length - 1];
       if (_isOperator(last)) {
         finalExp = finalExp.substring(0, finalExp.length - 1);
@@ -162,14 +141,12 @@ class CalculatorLogic {
       ContextModel cm = ContextModel();
       double eval = exp.evaluate(EvaluationType.REAL, cm);
 
-      // Trim result (remove .0 if integer)
       if (eval % 1 == 0) {
         result = eval.toInt().toString();
       } else {
         result = eval.toString();
       }
 
-      // After equals, keep result as new expression (so user can continue)
       expression = result;
     } catch (e) {
       result = 'Error';
@@ -177,9 +154,6 @@ class CalculatorLogic {
   }
 }
 
-/* =========================
-   Calculator Button Widget
-   ========================= */
 class CalculatorButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
@@ -228,10 +202,6 @@ class CalculatorButton extends StatelessWidget {
     return btn;
   }
 }
-
-/* =========================
-   Calculator Screen (UI)
-   ========================= */
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key});
 
